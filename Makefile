@@ -4,14 +4,18 @@ src_shaker = algorithm/shaker.nasm
 src_insertion = algorithm/insertion.nasm
 src_selection = algorithm/selection.nasm
 src_gnome = algorithm/gnome.nasm
-src_sort = $(src_bubble) $(src_shaker) $(src_insertion) $(src_selection) $(src_gnome)
+src_odd_even = algorithm/odd-even.nasm
+src_cycle = algorithm/cycle.nasm
+src_sort = $(src_bubble) $(src_shaker) $(src_insertion) $(src_selection) $(src_gnome) $(src_odd_even) $(src_cycle)
 
 obj_bubble = bubble.o
 obj_shaker = shaker.o
 obj_insertion = insertion.o
 obj_selection = selection.o
 obj_gnome = gnome.o
-obj_sort = $(obj_bubble) $(obj_shaker) $(obj_insertion) $(obj_selection) $(obj_gnome)
+obj_odd_even = odd-even.o
+obj_cycle = cycle.nasm
+obj_sort = $(obj_bubble) $(obj_shaker) $(obj_insertion) $(obj_selection) $(obj_gnome) $(obj_odd_even) $(obj_cycle)
 
 hdr_test = sort_test.hpp
 src_test = sort_test.cpp
@@ -39,6 +43,12 @@ $(obj_selection): $(src_selection)
 	nasm $(f_nasm) $^ -o $@
 
 $(obj_gnome): $(src_gnome)
+	nasm $(f_nasm) $^ -o $@
+
+$(obj_odd_even): $(src_odd_even)
+	nasm $(f_nasm) $^ -o $@
+
+$(obj_cycle): $(src_cycle)
 	nasm $(f_nasm) $^ -o $@
 
 # --------------------------------------------------------------------------------

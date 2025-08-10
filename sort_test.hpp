@@ -83,7 +83,7 @@ array_state_to_str(const array_state& state)
 // --------------------------------------------------------------------------------
 extern "C"
 {
-    typedef int (*f_cmp)        (const void* const a, const void* const b);
+    typedef int  (*f_cmp)       (const void* const a, const void* const b);
     typedef void (*f_generic)   (void* addr, std::size_t n, std::size_t size, f_cmp cmp);
     typedef void (*f_uint64)    (std::uint64_t* addr, std::size_t n);
 }
@@ -115,9 +115,26 @@ public:
     virtual double
     get_exec_time() const { return (exec_time); }
 
-    void
-    sort_test([[maybe_unused]] void *addr, [[maybe_unused]] std::size_t n)
-    { }
+    virtual
+    bool
+    run_sort([[maybe_unused]]void *addr, [[maybe_unused]]std::size_t n, [[maybe_unused]]std::size_t size)
+    { return (false); }
+
+    bool
+    sort_test(void *addr, std::size_t n, std::size_t size)
+    {
+        bool rv;
+        struct timespec b, e;
+
+        clock_gettime(CLOCK_MONOTONIC_RAW, &b);
+        rv = run_sort(addr, n, size);
+        clock_gettime(CLOCK_MONOTONIC_RAW, &e);
+
+        exec_time = timespec_human_readable(b, e);
+
+        return (rv);
+    }
+
 };
 
 class algorithm_generic : public algorithm
@@ -130,28 +147,16 @@ public:
     :algorithm(_name, _info), f(_f), c(_c)
     { }
 
-    f_generic
-    get_sort_func() const { return (f); }
-
-    f_cmp
-    get_cmp_func() const { return (c); }
-
-    template <class T>
-    void
-    sort_test(void *addr, std::size_t n)
+    virtual
+    bool
+    run_sort(void* addr, std::size_t n, std::size_t size) override
     {
         if (!f || !c)
         {
-            throw std::runtime_error("No function provided");
+            return (false);
         }
-
-        struct timespec b, e;
-
-        clock_gettime(CLOCK_MONOTONIC_RAW, &b);
-        f(static_cast<T>(addr), n, sizeof(T), c);
-        clock_gettime(CLOCK_MONOTONIC_RAW, &e);
-
-        exec_time = timespec_human_readable(b, e);
+        f(addr, n, size, c);
+        return (true);
     }
 };
 
@@ -164,24 +169,16 @@ public:
     :algorithm(_name, _info), f(_f)
     { }
 
-    f_uint64
-    get_sort_func() const { return (f); }
-
-    void
-    sort_test(void *addr, std::size_t n)
+    virtual
+    bool
+    run_sort(void* addr, std::size_t n, [[maybe_unused]]std::size_t size) override
     {
         if (!f)
         {
-            throw std::runtime_error("No function provided");
+            return (false);
         }
-
-        struct timespec b, e;
-
-        clock_gettime(CLOCK_MONOTONIC_RAW, &b);
         f(static_cast<std::uint64_t*>(addr), n);
-        clock_gettime(CLOCK_MONOTONIC_RAW, &e);
-
-        exec_time = timespec_human_readable(b, e);
+        return (true);
     }
 };
 
@@ -206,11 +203,11 @@ struct sort_report
     }
 
     void
-    print_boarder()
+    print_boarder(char c)
     {
-        for (std::size_t i = 0; i < 95; ++i)
+        for (std::size_t i = 0; i < 100; ++i)
         {
-            putchar('=');
+            putchar(c);
         }
         putchar('\n');
     }
@@ -218,8 +215,7 @@ struct sort_report
     void
     print_header()
     {
-        print_boarder();
-        std::printf("| %-15s | %-25s | %-20s | %3s | %3s | %9s |\n",
+        std::printf("| %-15s | %-25s | %-20s | %5s | %5s | %9s |\n",
                     "ALGORITHM NAME",
                     "ADDITIONAL INFO",
                     "ARRAY INITIAL STATE",
@@ -231,7 +227,7 @@ struct sort_report
     void
     print()
     {
-        std::printf("| %-15s | %-25s | %-20s | %3zu | %3zu | %9.6f |\n",
+        std::printf("| %-15s | %-25s | %-20s | %5zu | %5zu | %9.6f |\n",
                        name,   info,   st,     n,     size,  exec_time);
     }
 
@@ -281,6 +277,6 @@ struct sort_report
     }
 };
 
-};
+}
 
 #endif // SORT_TEST_HPP

@@ -11,10 +11,13 @@ namespace s = sort_test;
 extern "C"
 {
     void bubble_sort_uint64          (std::uint64_t*, std::size_t);
+    void shaker_sort_uint64          (std::uint64_t*, std::size_t);
     void shaker_sort_oneloop_uint64  (std::uint64_t*, std::size_t);
     void insertion_sort_uint64       (std::uint64_t*, std::size_t);
     void selection_sort_uint64       (std::uint64_t*, std::size_t);
     void gnome_sort_uint64           (std::uint64_t*, std::size_t);
+    void odd_even_sort_uint64        (std::uint64_t*, std::size_t);
+    void cycle_sort_uint64           (std::uint64_t*, std::size_t);
 }
 
 template <class T>
@@ -26,10 +29,13 @@ get_algorithms_by_type(std::vector<s::algorithm*>& v)
     static std::vector<s::algorithm_uint64>  v_uint64 =
     {
         s::algorithm_uint64("bubble sort",     "uint64",           bubble_sort_uint64),
+        s::algorithm_uint64("shaker sort",     "uint64",           shaker_sort_uint64),
         s::algorithm_uint64("shaker sort",     "uint64, one loop", shaker_sort_oneloop_uint64),
         s::algorithm_uint64("insertion sort",  "uint64",           insertion_sort_uint64),
         s::algorithm_uint64("selection sort",  "uint64",           selection_sort_uint64),
-        s::algorithm_uint64("gnome sort",      "uint64",           gnome_sort_uint64)
+        s::algorithm_uint64("gnome sort",      "uint64",           gnome_sort_uint64),
+        s::algorithm_uint64("odd even sort",   "uint64",           odd_even_sort_uint64),
+        s::algorithm_uint64("cycle sort",      "uint64",           cycle_sort_uint64)
     };
 
     for (std::size_t i = 0; i < v_generic.size(); ++i)
@@ -48,7 +54,7 @@ get_algorithms_by_type(std::vector<s::algorithm*>& v)
 
 template <class T, std::size_t n>
 void
-run_tests_by_type(const char* type, std::vector<s::sort_report>& v_sr)
+run_tests_by_type_and_length(const char* type, std::vector<s::sort_report>& v_sr)
 {
     alignas(64) static T main_array[n];
     alignas(64) static T test_array[n];
@@ -76,34 +82,32 @@ run_tests_by_type(const char* type, std::vector<s::sort_report>& v_sr)
             switch (state)
             {
                 case s::array_state::SORTED_ASC:
-                    std::sort(test_array, test_array + n, [](T a, T b){ return (a > b); });
+                    std::sort(test_array, test_array + n, [](T a, T b){ return (a < b); });
                     break;
                 case s::array_state::SORTED_DESC:
-                    std::sort(test_array, test_array + n, [](T a, T b){ return (a < b); });
+                    std::sort(test_array, test_array + n, [](T a, T b){ return (a > b); });
                     break;
                 default:
                     break;
             }
 
-            try
+            if (!v[i]->sort_test(static_cast<void*>(test_array), n, sizeof(T)))
             {
-                v[i]->sort_test(static_cast<void*>(test_array), n);
-                for (std::size_t i = 0; i < n - 1; ++i)
-                {
-                    if (test_array[i] > test_array[i + 1])
-                    {
-                        std::fprintf(stderr, "Erroneous sorting algorithm: %s\n", v[i]->get_name());
-                        break;
-                    }
-                }
+                std::fprintf(stderr, "No sorting algorithm provided.\n");
+                std::exit(1);
+            }
 
-                s::sort_report sr(v[i], state, n, sizeof(T));
-                v_sr.push_back(sr);
-            }
-            catch (const std::exception& ex)
+            for (std::size_t i = 0; i < n - 1; ++i)
             {
-                std::fprintf(stderr, "%s : %s\n", ex.what(), v[i]->get_name());
+                if (test_array[i] > test_array[i + 1])
+                {
+                    std::fprintf(stderr, "Erroneous sorting algorithm: %s\n", v[i]->get_name());
+                    std::exit(1);
+                }
             }
+
+            s::sort_report sr(v[i], state, n, sizeof(T));
+            v_sr.push_back(sr);
         }
     }
 }
@@ -111,23 +115,36 @@ run_tests_by_type(const char* type, std::vector<s::sort_report>& v_sr)
 int
 main()
 {
-    constexpr std::size_t array_length = 16;
-
     std::vector<s::sort_report> v_sr;
-    run_tests_by_type<std::uint64_t, array_length>("uint64_t", v_sr);
+
+    constexpr std::size_t len_large  = (1 << 16);
+
+    run_tests_by_type_and_length<std::uint64_t, len_large> ("uint64_t", v_sr);
 
     if (!v_sr.size())
     {
         std::fprintf(stderr, "No report produced.\n");
-        std::exit(1);
     }
-
-    v_sr[0].print_header();
-    std::sort(&v_sr[0], &v_sr[0] + v_sr.size(), [](s::sort_report a, s::sort_report b){ return (a > b); });
-    for (std::size_t i = 0; i < v_sr.size(); ++i)
+    else
     {
-        v_sr[i].print_boarder();
-        v_sr[i].print();
+        std::sort(&v_sr[0], &v_sr[0] + v_sr.size(), [](s::sort_report a, s::sort_report b){ return (a > b); });
+
+        v_sr[0].print_boarder('-');
+        v_sr[0].print_header();
+
+        for (std::size_t i = 0; i < v_sr.size(); ++i)
+        {
+            if (i > 0 && v_sr[i - 1].state != v_sr[i].state)
+            {
+                v_sr[i].print_boarder('=');
+            }
+            else
+            {
+                v_sr[i].print_boarder('-');
+            }
+            v_sr[i].print();
+        }
+        v_sr[0].print_boarder('-');
     }
 }
 

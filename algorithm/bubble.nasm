@@ -11,7 +11,7 @@ bubble_sort_uint64:
     cmp rsi, 1
     jbe .end
 
-    mov edx, 8
+    mov rdx, 8
     lea rsi, [rdi + rsi * 8]    ; ptr to last element + 1
 
     .outer:
