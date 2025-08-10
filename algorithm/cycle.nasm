@@ -5,6 +5,7 @@ section .text
 ; -------------------------------------------------------------
 ; rdi - addr
 ; rsi - len
+times -(seek_correct_position_of_element - cycle_sort_uint64) % 16 nop
 cycle_sort_uint64:
     cmp rsi, 1
     jbe end
